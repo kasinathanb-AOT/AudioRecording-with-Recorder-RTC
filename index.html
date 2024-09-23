@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Audio Recorder with RecordRTC</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 10px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      #recordingStatus {
+        margin-top: 20px;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Audio Recorder</h1>
+    <button id="startButton">Start Recording</button>
+    <button id="stopButton" disabled>Stop Recording</button>
+    <div id="recordingStatus"></div>
+    <audio id="audioPlayback" controls style="display: none"></audio>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/RecordRTC/5.6.2/RecordRTC.min.js"></script>
+    <script>
+      let recorder;
+      let audio = document.querySelector("audio");
+
+      const startButton = document.getElementById("startButton");
+      const stopButton = document.getElementById("stopButton");
+      const recordingStatus = document.getElementById("recordingStatus");
+
+      startButton.onclick = async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+
+          recorder = new RecordRTC(stream, {
+            type: "audio",
+            mimeType: "audio/webm",
+            sampleRate: 44100,
+            desiredSampRate: 16000,
+            recorderType: RecordRTC.StereoAudioRecorder,
+            numberOfAudioChannels: 1,
+          });
+
+          recorder.startRecording();
+
+          startButton.disabled = true;
+          stopButton.disabled = false;
+          recordingStatus.textContent = "Recording...";
+
+          // Ensure we stop all tracks when recording is stopped
+          recorder.stream = stream;
+        } catch (error) {
+          console.error("Error starting recording:", error);
+          alert(
+            "Failed to start recording. Please check your microphone and permissions."
+          );
+        }
+      };
+
+      stopButton.onclick = () => {
+        recorder.stopRecording(() => {
+          const blob = recorder.getBlob();
+          audio.src = URL.createObjectURL(blob);
+
+          startButton.disabled = false;
+          stopButton.disabled = true;
+          recordingStatus.textContent =
+            "Recording stopped. You can play it below.";
+          audio.style.display = "block";
+
+          // Stop all tracks
+          recorder.stream.getTracks().forEach((track) => track.stop());
+        });
+      };
+    </script>
+  </body>
+</html>
